@@ -12,7 +12,9 @@ class ApiService {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       (config) => {
-        const token = localStorage.getItem('authToken');
+        // Get token from sessionStorage synchronously
+        const token = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem('authToken') : null;
+        
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
         }
@@ -27,10 +29,19 @@ class ApiService {
     this.api.interceptors.response.use(
       (response) => response,
       (error) => {
-        if (error.response?.status === 401) {
-          localStorage.removeItem('authToken');
-          localStorage.removeItem('user');
-          window.location.href = '/login';
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.error('Authentication error:', error.response.data);
+          
+          // Clear session from sessionStorage
+          if (typeof sessionStorage !== 'undefined') {
+            sessionStorage.removeItem('authToken');
+            sessionStorage.removeItem('user');
+          }
+          
+          // Redirect to login
+          if (window.location.pathname !== '/candidate') {
+            window.location.href = '/candidate';
+          }
         }
         return Promise.reject(error);
       }

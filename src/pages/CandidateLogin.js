@@ -4,10 +4,11 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import './Login.css';
 
-const AdminLogin = () => {
+const CandidateLogin = () => {
   const [formData, setFormData] = useState({
     username: '',
     password: '',
+    mobile: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -28,8 +29,8 @@ const AdminLogin = () => {
     e.preventDefault();
     setLoading(true);
     
-    if (!formData.username || !formData.password) {
-      showError('Please fill in all required fields');
+    if (!formData.username || !formData.password || !formData.mobile) {
+      showError('Please fill in all fields');
       setLoading(false);
       return;
     }
@@ -37,6 +38,7 @@ const AdminLogin = () => {
     const credentials = {
       username: formData.username.trim(),
       password: formData.password,
+      mobile: formData.mobile.trim(),
     };
 
     try {
@@ -66,15 +68,15 @@ const AdminLogin = () => {
 
   return (
     <div className="login-container">
-      <div className="login-card admin-login">
+      <div className="login-card candidate-login">
         <div className="login-header">
-          <h1>Admin Portal</h1>
-          <p>Secure Desktop Application</p>
+          <h1>Candidate Portal</h1>
+          <p>Access Your Tasks & Assignments</p>
         </div>
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
-            <label htmlFor="username">Username or Email</label>
+            <label htmlFor="username">Username</label>
             <input
               type="text"
               id="username"
@@ -83,7 +85,7 @@ const AdminLogin = () => {
               value={formData.username}
               onChange={handleInputChange}
               disabled={loading}
-              placeholder="Enter your username or email"
+              placeholder="Enter your username"
               required
             />
           </div>
@@ -113,6 +115,24 @@ const AdminLogin = () => {
             </div>
           </div>
 
+          <div className="form-group">
+            <label htmlFor="mobile">Mobile Number</label>
+            <input
+              type="tel"
+              id="mobile"
+              name="mobile"
+              className="form-control"
+              value={formData.mobile}
+              onChange={handleInputChange}
+              disabled={loading}
+              placeholder="Enter your mobile number (as registered)"
+              required
+            />
+            <small className="form-text text-muted">
+              Required for account verification - must match registered number
+            </small>
+          </div>
+
           <button
             type="submit"
             className="btn btn-primary login-btn"
@@ -133,35 +153,34 @@ const AdminLogin = () => {
           <button
             type="button"
             className="btn btn-link"
-            onClick={() => navigate('/candidate')}
+            onClick={() => navigate('/admin')}
           >
-            Candidate Login →
+            ← Admin Login
           </button>
           <button
             type="button"
             className="btn btn-link"
             onClick={() => navigate('/login-selection')}
           >
-            Portal Selection
+            Switch Portal
           </button>
         </div>
 
         <div className="login-info">
           <div className="info-card">
-            <h3>🔑 Default Admin Credentials</h3>
-            <p><strong>Username:</strong> <code>admin</code></p>
-            <p><strong>Password:</strong> <code>admin123</code></p>
-            <small>⚠️ Change these credentials after first login</small>
+            <h4>📋 Your Responsibilities</h4>
+            <ul>
+              <li>Download assigned tasks</li>
+              <li>Complete work offline</li>
+              <li>Submit before deadline</li>
+              <li>Track submission status</li>
+            </ul>
           </div>
           
           <div className="info-card">
-            <h3>📊 Admin Capabilities</h3>
-            <ul>
-              <li>Create and manage candidates</li>
-              <li>Upload and assign tasks</li>
-              <li>Monitor submission progress</li>
-              <li>Track candidate activity</li>
-            </ul>
+            <h4>🔐 Security Note</h4>
+            <p>Your credentials are confidential. Never share your password.</p>
+            <p>Contact your administrator if you forget your credentials.</p>
           </div>
         </div>
       </div>
@@ -169,4 +188,4 @@ const AdminLogin = () => {
   );
 };
 
-export default AdminLogin;
+export default CandidateLogin;

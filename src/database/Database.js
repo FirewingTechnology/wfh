@@ -100,6 +100,16 @@ class Database {
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (task_id) REFERENCES tasks(id) ON DELETE CASCADE,
         UNIQUE(user_id, task_id)
+      )`,
+
+      `CREATE TABLE IF NOT EXISTS sessions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL,
+        token TEXT UNIQUE NOT NULL,
+        expires_at DATETIME NOT NULL,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT 1,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
       )`
     ];
 
@@ -374,6 +384,109 @@ class Database {
           } else {
             resolve(row ? row.download_count : 0);
           }
+        }
+      );
+    });
+  }
+
+  // Session management (SQLite-based authentication)
+  saveSession(userId, token, expiresAt) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "INSERT INTO sessions (user_id, token, expires_at) VALUES (?, ?, ?)",
+        [userId, token, expiresAt],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.lastID);
+          }
+        }
+      );
+    });
+  }
+
+  getSessionByToken(token) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT s.*, u.id as user_id, u.username, u.email, u.role 
+         FROM sessions s 
+         JOIN users u ON s.user_id = u.id 
+         WHERE s.token = ? AND s.is_active = 1 AND s.expires_at > CURRENT_TIMESTAMP`,
+        [token],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        }
+      );
+    });
+  }
+
+  getActiveSessionByUserId(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.get(
+        `SELECT * FROM sessions 
+         WHERE user_id = ? AND is_active = 1 AND expires_at > CURRENT_TIMESTAMP
+         ORDER BY created_at DESC LIMIT 1`,
+        [userId],
+        (err, row) => {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(row);
+          }
+        }
+      );
+    });
+  }
+
+  invalidateSession(token) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE sessions SET is_active = 0 WHERE token = ?",
+        [token],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes);
+          }
+        }
+      );
+    });
+  }
+
+  invalidateAllUserSessions(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "UPDATE sessions SET is_active = 0 WHERE user_id = ?",
+        [userId],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes);
+          }
+        }
+      );
+    });
+  }
+
+  // Get submissions for a specific user
+  async getSubmissionsByUser(userId) {
+    return new Promise((resolve, reject) => {
+      this.db.all(
+        `SELECT s.*, t.task_name FROM submissions s 
+         LEFT JOIN tasks t ON s.task_id = t.id 
+         WHERE s.user_id = ? 
+         ORDER BY s.submitted_at DESC`,
+        [userId],
+        (err, rows) => {
+          if (err) reject(err);
+          else resolve(rows || []);
         }
       );
     });

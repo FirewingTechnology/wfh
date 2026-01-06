@@ -18,6 +18,13 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openExternal: (url) => ipcRenderer.invoke('open-external', url)
 });
 
+// Expose IPC renderer for session management (SQLite-based auth)
+contextBridge.exposeInMainWorld('electron', {
+  ipcRenderer: {
+    invoke: (channel, data) => ipcRenderer.invoke(channel, data),
+  }
+});
+
 // Environment information
 contextBridge.exposeInMainWorld('env', {
   isDev: process.env.NODE_ENV === 'development',

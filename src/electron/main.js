@@ -156,6 +156,78 @@ ipcMain.handle('show-open-dialog', async (event, options) => {
   return result;
 });
 
+// Session management IPC handlers (SQLite-based)
+const Database = require('../database/Database');
+let dbInstance = null;
+
+function getDatabase() {
+  if (!dbInstance) {
+    dbInstance = new Database();
+  }
+  return dbInstance;
+}
+
+ipcMain.handle('save-session', async (event, { token, userId, expiresAt }) => {
+  try {
+    const db = getDatabase();
+    const sessionId = await db.saveSession(userId, token, expiresAt);
+    console.log('Session saved to SQLite:', sessionId);
+    return { success: true, sessionId };
+  } catch (error) {
+    console.error('Error saving session:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-session', async (event) => {
+  try {
+    const db = getDatabase();
+    // Get token from request auth header if available, or return latest active session
+    const session = await new Promise((resolve, reject) => {
+      db.db.get(
+        `SELECT s.*, u.id as user_id, u.username, u.email, u.role 
+         FROM sessions s 
+         JOIN users u ON s.user_id = u.id 
+         WHERE s.is_active = 1 AND s.expires_at > CURRENT_TIMESTAMP
+         ORDER BY s.created_at DESC LIMIT 1`,
+        (err, row) => {
+          if (err) reject(err);
+          else resolve(row);
+        }
+      );
+    });
+    return session || null;
+  } catch (error) {
+    console.error('Error getting session:', error);
+    return null;
+  }
+});
+
+ipcMain.handle('invalidate-session', async (event, token = null) => {
+  try {
+    const db = getDatabase();
+    if (token) {
+      await db.invalidateSession(token);
+    } else {
+      // Invalidate all active sessions
+      await new Promise((resolve, reject) => {
+        db.db.run(
+          "UPDATE sessions SET is_active = 0 WHERE is_active = 1",
+          (err) => {
+            if (err) reject(err);
+            else resolve();
+          }
+        );
+      });
+    }
+    console.log('Session(s) invalidated');
+    return { success: true };
+  } catch (error) {
+    console.error('Error invalidating session:', error);
+    return { success: false, error: error.message };
+  }
+});
+
 // App event handlers
 app.whenReady().then(() => {
   createWindow();

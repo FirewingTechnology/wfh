@@ -8,8 +8,10 @@ A secure React-based desktop application built with Electron for managing Admin-
 - **Task Management**: Admins can create, assign, and track task progress
 - **File Management**: Secure ZIP upload, download, and validation
 - **Desktop Application**: Windows .exe installer with offline capabilities
-- **Database Integration**: SQLite for local data storage
+- **Database Integration**: SQLite for local data storage with PostgreSQL migration path
 - **Real-time Status Tracking**: Monitor candidate progress and submissions
+- **Email Notifications**: Auto-send login credentials and task files to candidates
+- **Secure Session Management**: JWT tokens stored in SQLite database
 
 ## 🛠️ Technology Stack
 
@@ -35,13 +37,18 @@ A secure React-based desktop application built with Electron for managing Admin-
    npm install
    ```
 
-2. **Start Development Environment**
+2. **Configure Email (Optional)**
+   - Copy `.env.example` to `.env`
+   - Add your email credentials (see [EMAIL_SETUP.md](EMAIL_SETUP.md) for details)
+   - Without email config, the app runs in mock mode (logs to console)
+
+3. **Start Development Environment**
    ```bash
    npm run dev
    ```
    This will start both the Express server and Electron app in development mode.
 
-3. **Build for Production**
+4. **Build for Production**
    ```bash
    npm run dist-win
    ```

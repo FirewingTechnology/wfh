@@ -1,0 +1,29 @@
+Serial No           : 2
+Title               : Mr.
+First Name          : Rahul
+Last Name           : Sharma
+Initial             : K
+
+Email               : rahul.sharma@gmail.com
+Father Name         : Mahesh Sharma
+DOB (yyyy-mm-dd)    : 1998-04-15
+Gender              : Male
+Profession          : Software Engineer
+
+Mailing Street      : Flat No 302, Shanti Apartments
+Mailing City        : Pune
+Mailing Postal Code : 411038
+Mailing Country     : India
+Service Provider    : Airtel
+
+File No             : IND76180379
+Reference No        : REF/IND/2024/026
+SIM No              : 8991101200003204512
+Type Of Network     : 4G LTE
+Cell Model No       : Redmi Note 12 Pro
+
+IMEI 1              : 864239058472913
+IMEI 2              : 864239058472921
+Type Of Plan        : Postpaid Corporate Plan
+Credit Card Type    : RuPay
+Contract Value      : INR 45,000

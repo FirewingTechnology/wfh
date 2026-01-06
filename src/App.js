@@ -2,7 +2,10 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { NotificationProvider } from './context/NotificationContext';
+import LoginSelection from './pages/LoginSelection';
 import Login from './pages/Login';
+import CandidateLogin from './pages/CandidateLogin';
+import DemoSetup from './pages/DemoSetup';
 import AdminDashboard from './pages/AdminDashboard';
 import CandidateDashboard from './pages/CandidateDashboard';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -16,24 +19,41 @@ function App() {
           <div className="App">
             <Notifications />
             <Routes>
-              <Route path="/login" element={<Login />} />
+              {/* Portal Selection */}
+              <Route path="/login-selection" element={<LoginSelection />} />
+
+              {/* Demo Setup */}
+              <Route path="/demo-setup" element={<DemoSetup />} />
+
+              {/* Admin Routes - /admin shows login or dashboard */}
               <Route 
                 path="/admin" 
                 element={
-                  <ProtectedRoute role="admin">
+                  <ProtectedRoute 
+                    role="admin"
+                    loginComponent={<Login />}
+                  >
                     <AdminDashboard />
                   </ProtectedRoute>
                 } 
               />
+
+              {/* Candidate Routes - /candidate shows login or dashboard */}
               <Route 
                 path="/candidate" 
                 element={
-                  <ProtectedRoute role="candidate">
+                  <ProtectedRoute 
+                    role="candidate"
+                    loginComponent={<CandidateLogin />}
+                  >
                     <CandidateDashboard />
                   </ProtectedRoute>
                 } 
               />
-              <Route path="/" element={<Navigate to="/login" replace />} />
+
+              {/* Default redirect to selection */}
+              <Route path="/" element={<Navigate to="/login-selection" replace />} />
+              <Route path="/login" element={<Navigate to="/login-selection" replace />} />
             </Routes>
           </div>
         </Router>

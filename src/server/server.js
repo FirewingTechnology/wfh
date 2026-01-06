@@ -8,6 +8,7 @@ const fs = require('fs').promises;
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
 const Database = require('../database/Database');
+const emailService = require('./EmailService');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -65,7 +66,7 @@ const upload = multer({
 });
 
 // Authentication middleware
-const authenticateToken = (req, res, next) => {
+const authenticateToken = async (req, res, next) => {
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1];
 
@@ -73,13 +74,31 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
-    }
-    req.user = user;
-    next();
-  });
+  try {
+    // First verify JWT signature
+    jwt.verify(token, JWT_SECRET, async (err, user) => {
+      if (err) {
+        return res.status(403).json({ error: 'Invalid or expired token' });
+      }
+
+      // Then check if session exists in SQLite and is still active
+      try {
+        const session = await db.getSessionByToken(token);
+        if (!session) {
+          return res.status(403).json({ error: 'Session not found or expired' });
+        }
+        req.user = user;
+        req.session = session;
+        next();
+      } catch (dbError) {
+        console.error('Database session check error:', dbError);
+        return res.status(500).json({ error: 'Session validation failed' });
+      }
+    });
+  } catch (error) {
+    console.error('Authentication error:', error);
+    return res.status(500).json({ error: 'Authentication failed' });
+  }
 };
 
 // Role-based authorization middleware
@@ -140,6 +159,100 @@ app.get('/api/health', (req, res) => {
   res.json({ status: 'OK', message: 'Server is running' });
 });
 
+// Demo candidate creation (for testing purposes)
+app.post('/api/auth/create-demo-candidate', async (req, res) => {
+  try {
+    const demoCandidates = [
+      {
+        username: 'demo_candidate',
+        password: 'demo123',
+        email: 'demo@candidate.com',
+        mobile: '1234567890',
+        name: 'Demo Candidate'
+      },
+      {
+        username: 'test_candidate',
+        password: 'test123',
+        email: 'test@candidate.com',
+        mobile: '9876543210',
+        name: 'Test Candidate'
+      },
+      {
+        username: 'john_doe',
+        password: 'john123',
+        email: 'john@candidate.com',
+        mobile: '5555555555',
+        name: 'John Doe'
+      }
+    ];
+
+    const createdCandidates = [];
+    const skippedCandidates = [];
+
+    for (const candidate of demoCandidates) {
+      try {
+        // Check if user already exists
+        const existingUser = await db.getUserByUsername(candidate.username);
+        if (existingUser) {
+          skippedCandidates.push({
+            username: candidate.username,
+            email: candidate.email,
+            reason: 'Already exists'
+          });
+          continue;
+        }
+
+        const hashedPassword = await bcrypt.hash(candidate.password, 10);
+        const userId = await db.createUser({
+          username: candidate.username,
+          password_hash: hashedPassword,
+          email: candidate.email,
+          mobile: candidate.mobile,
+          role: 'candidate'
+        });
+
+        createdCandidates.push({
+          id: userId,
+          username: candidate.username,
+          password: candidate.password,
+          email: candidate.email,
+          mobile: candidate.mobile,
+          name: candidate.name
+        });
+
+        // Log activity
+        await db.logActivity(
+          0, // System
+          'create_demo_candidate',
+          `Demo candidate created: ${candidate.username}`,
+          req.ip,
+          req.get('User-Agent')
+        );
+
+      } catch (error) {
+        skippedCandidates.push({
+          username: candidate.username,
+          reason: error.message
+        });
+      }
+    }
+
+    res.json({
+      message: 'Demo candidate creation complete',
+      created: createdCandidates,
+      skipped: skippedCandidates,
+      instructions: {
+        login: 'Go to /candidate endpoint and use the credentials above',
+        note: 'These are demo accounts for testing purposes only'
+      }
+    });
+
+  } catch (error) {
+    console.error('Create demo candidate error:', error);
+    res.status(500).json({ error: 'Failed to create demo candidates' });
+  }
+});
+
 // Authentication Routes
 app.post('/api/auth/login', async (req, res) => {
   try {
@@ -181,6 +294,16 @@ app.post('/api/auth/login', async (req, res) => {
       JWT_SECRET,
       { expiresIn: '8h' }
     );
+
+    // Save session to SQLite
+    const expiresAt = new Date(Date.now() + 8 * 60 * 60 * 1000).toISOString();
+    try {
+      await db.saveSession(user.id, token, expiresAt);
+      console.log('Session saved to database for user:', user.username);
+    } catch (sessionError) {
+      console.error('Error saving session:', sessionError);
+      // Continue with response even if session save fails
+    }
     
     // Log activity
     await db.logActivity(
@@ -248,25 +371,29 @@ app.post('/api/admin/create-candidate', authenticateToken, authorizeRole(['admin
       req.ip,
       req.get('User-Agent')
     );
-    
-    // In production, you would send email here
-    console.log(`New candidate created:
-      Name: ${name}
-      Username: ${username}
-      Password: ${password}
-      Email: ${email}
-      Mobile: ${mobile}
-    `);
+
+    // Send email with login credentials
+    const emailResult = await emailService.sendCandidateCreationEmail(
+      email,
+      name,
+      username,
+      password
+    );
+
+    if (!emailResult.success) {
+      console.warn('Warning: Email failed to send, but candidate was created:', emailResult.error);
+    }
     
     res.json({
       message: 'Candidate created successfully',
       candidate: {
         id: userId,
         username,
-        password, // Only return in development
         email,
         mobile
-      }
+      },
+      emailSent: emailResult.success,
+      emailStatus: emailResult.mock ? 'mock' : 'sent'
     });
     
   } catch (error) {
@@ -316,6 +443,25 @@ app.post('/api/admin/upload-task', authenticateToken, authorizeRole(['admin']), 
       req.ip,
       req.get('User-Agent')
     );
+
+    // Get candidate details
+    const candidate = await db.getUserById(parseInt(assignedTo));
+    
+    if (candidate) {
+      // Send email with task file attachment
+      const emailResult = await emailService.sendTaskAssignmentEmail(
+        candidate.email,
+        candidate.username,
+        taskName,
+        description || '',
+        req.file.path,
+        deadline
+      );
+
+      if (!emailResult.success) {
+        console.warn('Warning: Email failed to send, but task was created:', emailResult.error);
+      }
+    }
     
     res.json({
       message: 'Task created and assigned successfully',
@@ -330,7 +476,9 @@ app.post('/api/admin/upload-task', authenticateToken, authorizeRole(['admin']), 
           size: req.file.size,
           fileCount: validation.fileCount
         }
-      }
+      },
+      emailSent: candidate ? true : false,
+      emailStatus: candidate ? 'sent' : 'not_applicable'
     });
     
   } catch (error) {
@@ -359,8 +507,10 @@ app.get('/api/admin/tasks', authenticateToken, authorizeRole(['admin']), async (
 // Candidate Routes
 app.get('/api/candidate/tasks', authenticateToken, authorizeRole(['candidate']), async (req, res) => {
   try {
+    console.log('Fetching tasks for user:', req.user.id);
     const tasks = await db.getTasksForUser(req.user.id);
-    res.json(tasks);
+    console.log('Tasks found:', tasks);
+    res.json(tasks || []);
   } catch (error) {
     console.error('Get candidate tasks error:', error);
     res.status(500).json({ error: 'Failed to fetch tasks' });
@@ -482,6 +632,19 @@ app.post('/api/candidate/submit/:taskId', authenticateToken, authorizeRole(['can
       }
     }
     res.status(500).json({ error: 'Failed to submit task' });
+  }
+});
+
+// Get candidate's submissions
+app.get('/api/candidate/my-submissions', authenticateToken, authorizeRole(['candidate']), async (req, res) => {
+  try {
+    const submissions = await db.getSubmissionsByUser(req.user.id);
+    res.json({
+      submissions: submissions || []
+    });
+  } catch (error) {
+    console.error('Get submissions error:', error);
+    res.status(500).json({ error: 'Failed to fetch submissions' });
   }
 });
 
