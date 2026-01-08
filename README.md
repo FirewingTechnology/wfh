@@ -1,6 +1,6 @@
-# Admin-Candidate Workflow Desktop Application
+# Employee or Candidate Dashboard
 
-A secure React-based desktop application built with Electron for managing Admin-Candidate workflows with task distribution and submission.
+A secure React-based desktop application built with Electron for managing Employee or Candidate workflows with task distribution and submission.
 
 ## 🚀 Features
 
@@ -33,7 +33,7 @@ A secure React-based desktop application built with Electron for managing Admin-
 1. **Clone and Install Dependencies**
    ```bash
    git clone <repository-url>
-   cd admin-candidate-desktop
+   cd employee-or-candidate-dashboard
    npm install
    ```
 
@@ -57,7 +57,7 @@ A secure React-based desktop application built with Electron for managing Admin-
 ## 🏗️ Project Structure
 
 ```
-admin-candidate-desktop/
+employee-or-candidate-dashboard/
 ├── src/
 │   ├── components/          # React UI components
 │   ├── pages/              # Main application pages

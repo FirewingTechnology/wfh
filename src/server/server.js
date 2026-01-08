@@ -7,11 +7,12 @@ const jwt = require('jsonwebtoken');
 const fs = require('fs').promises;
 const AdmZip = require('adm-zip');
 const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
 const Database = require('../database/Database');
 const emailService = require('./EmailService');
 
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5002;
 const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
 
 // Initialize database
@@ -54,10 +55,16 @@ const storage = multer.diskStorage({
 const upload = multer({ 
   storage: storage,
   fileFilter: (req, file, cb) => {
-    if (file.mimetype === 'application/zip' || file.mimetype === 'application/x-zip-compressed') {
+    const allowedMimes = ['application/zip', 'application/x-zip-compressed', 'text/plain'];
+    const allowedExtensions = ['.zip', '.txt'];
+    
+    const isAllowedMime = allowedMimes.includes(file.mimetype);
+    const isAllowedExt = allowedExtensions.some(ext => file.originalname.toLowerCase().endsWith(ext));
+    
+    if (isAllowedMime || isAllowedExt) {
       cb(null, true);
     } else {
-      cb(new Error('Only ZIP files are allowed'), false);
+      cb(new Error('Only ZIP and TXT files are allowed'), false);
     }
   },
   limits: {
@@ -406,6 +413,35 @@ app.post('/api/admin/create-candidate', authenticateToken, authorizeRole(['admin
   }
 });
 
+app.delete('/api/admin/candidates/:id', authenticateToken, authorizeRole(['admin']), async (req, res) => {
+  try {
+    const candidateId = req.params.id;
+    
+    // Check if candidate exists
+    const candidate = await db.getUserById(candidateId);
+    if (!candidate || candidate.role !== 'candidate') {
+      return res.status(404).json({ error: 'Candidate not found' });
+    }
+    
+    // Delete candidate (cascade will handle related records)
+    await db.deleteCandidate(candidateId);
+    
+    // Log activity
+    await db.logActivity(
+      req.user.id,
+      'delete_candidate',
+      `Deleted candidate: ${candidate.username} (${candidate.email})`,
+      req.ip,
+      req.get('User-Agent')
+    );
+    
+    res.json({ message: 'Candidate deleted successfully' });
+  } catch (error) {
+    console.error('Delete candidate error:', error);
+    res.status(500).json({ error: 'Failed to delete candidate' });
+  }
+});
+
 app.post('/api/admin/upload-task', authenticateToken, authorizeRole(['admin']), upload.single('zipFile'), async (req, res) => {
   try {
     const { taskName, description, assignedTo, deadline } = req.body;
@@ -419,7 +455,7 @@ app.post('/api/admin/upload-task', authenticateToken, authorizeRole(['admin']), 
     }
     
     // Validate ZIP file
-    const validation = await validateZipFile(req.file.path);
+    const validation = await validateZipFile(req.file.path, 1);
     if (!validation.valid) {
       await fs.unlink(req.file.path); // Delete invalid file
       return res.status(400).json({ error: validation.error });
@@ -559,13 +595,13 @@ app.get('/api/candidate/download/:taskId', authenticateToken, authorizeRole(['ca
   }
 });
 
-app.post('/api/candidate/submit/:taskId', authenticateToken, authorizeRole(['candidate']), upload.single('submission'), async (req, res) => {
+app.post('/api/candidate/submit/:taskId', authenticateToken, authorizeRole(['candidate']), upload.single('file'), async (req, res) => {
   try {
     const { taskId } = req.params;
     const { notes } = req.body;
     
     if (!req.file) {
-      return res.status(400).json({ error: 'Submission ZIP file is required' });
+      return res.status(400).json({ error: 'Submission file is required' });
     }
     
     // Verify task belongs to user
@@ -585,8 +621,17 @@ app.post('/api/candidate/submit/:taskId', authenticateToken, authorizeRole(['can
       return res.status(400).json({ error: 'Submission deadline has passed' });
     }
     
-    // Validate ZIP file (minimum 1 file for submission)
-    const validation = await validateZipFile(req.file.path, 1);
+    // Validate file based on type
+    let validation = { valid: false, error: 'Unsupported file type' };
+    
+    if (req.file.mimetype === 'text/plain' || req.file.originalname.endsWith('.txt')) {
+      // Accept txt files for data entry
+      validation = { valid: true, fileCount: 1, files: [req.file.originalname] };
+    } else if (req.file.mimetype === 'application/zip' || req.file.originalname.endsWith('.zip')) {
+      // Validate ZIP file (minimum 1 file for submission)
+      validation = await validateZipFile(req.file.path, 1);
+    }
+    
     if (!validation.valid) {
       await fs.unlink(req.file.path);
       return res.status(400).json({ error: validation.error });

@@ -1,7 +1,7 @@
 {
-  "name": "admin-candidate-desktop",
+  "name": "employee-or-candidate-dashboard",
   "version": "1.0.0",
-  "description": "React-based Desktop Application for Admin-Candidate Workflow",
+  "description": "Employee or Candidate Dashboard Application",
   "main": "src/electron/main.js",
   "private": true,
   "homepage": "./",
@@ -47,8 +47,8 @@
     "wait-on": "^7.0.1"
   },
   "build": {
-    "appId": "com.company.admin-candidate-desktop",
-    "productName": "Admin Candidate Workflow",
+    "appId": "com.company.employee-candidate-dashboard",
+    "productName": "Employee or Candidate Dashboard",
     "directories": {
       "output": "dist"
     },

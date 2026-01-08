@@ -54,7 +54,7 @@ const CandidateDashboard = () => {
   const fetchTasks = async () => {
     try {
       const token = sessionStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/candidate/tasks', {
+      const response = await fetch('http://localhost:5002/api/candidate/tasks', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -78,7 +78,7 @@ const CandidateDashboard = () => {
   const fetchSubmissions = async () => {
     try {
       const token = sessionStorage.getItem('authToken');
-      const response = await fetch('http://localhost:5000/api/candidate/my-submissions', {
+      const response = await fetch('http://localhost:5002/api/candidate/my-submissions', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -97,7 +97,7 @@ const CandidateDashboard = () => {
   const handleDownloadTask = async (taskId) => {
     try {
       const token = sessionStorage.getItem('authToken');
-      const response = await fetch(`http://localhost:5000/api/candidate/download/${taskId}`, {
+      const response = await fetch(`http://localhost:5002/api/candidate/download/${taskId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -140,7 +140,7 @@ const CandidateDashboard = () => {
       submitFormData.append('file', uploadFile);
       submitFormData.append('notes', formData.remarks || '');
 
-      const response = await fetch(`http://localhost:5000/api/candidate/submit/${selectedTask.id}`, {
+      const response = await fetch(`http://localhost:5002/api/candidate/submit/${selectedTask.id}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -177,6 +177,56 @@ const CandidateDashboard = () => {
     showSuccess('Form details saved. You can now upload your file.');
   };
 
+  const generateTxtFile = () => {
+    const lines = [
+      `Serial No           : ${formData.serialNo || ''}`,
+      `Title               : ${formData.title || ''}`,
+      `First Name          : ${formData.firstName || ''}`,
+      `Last Name           : ${formData.lastName || ''}`,
+      `Initial             : ${formData.initial || ''}`,
+      ``,
+      `Email               : ${formData.email || ''}`,
+      `Father Name         : ${formData.fatherName || ''}`,
+      `DOB (yyyy-mm-dd)    : ${formData.dob || ''}`,
+      `Gender              : ${formData.gender || ''}`,
+      `Profession          : ${formData.profession || ''}`,
+      ``,
+      `Mailing Street      : ${formData.mailingStreet || ''}`,
+      `Mailing City        : ${formData.mailingCity || ''}`,
+      `Mailing Postal Code : ${formData.mailingPostalCode || ''}`,
+      `Mailing Country     : ${formData.mailingCountry || ''}`,
+      `Service Provider    : ${formData.serviceProvider || ''}`,
+      ``,
+      `File No             : ${formData.fileNo || ''}`,
+      `Reference No        : ${formData.referenceNo || ''}`,
+      `SIM No              : ${formData.simNo || ''}`,
+      `Type Of Network     : ${formData.typeOfNetwork || ''}`,
+      `Cell Model No       : ${formData.cellModelNo || ''}`,
+      ``,
+      `IMEI 1              : ${formData.imei1 || ''}`,
+      `IMEI 2              : ${formData.imei2 || ''}`,
+      `Type Of Plan        : ${formData.typeOfPlan || ''}`,
+      `Credit Card Type    : ${formData.creditCardType || ''}`,
+      `Contract Value      : ${formData.contractValue || ''}`,
+      `Date Of Issue       : ${formData.dateOfIssue || ''}`,
+      `Date Of Renewal     : ${formData.dateOfRenewal || ''}`,
+      `Installment         : ${formData.installment || ''}`,
+      `Amount In Words     : ${formData.amountInWords || ''}`,
+      ``,
+      `Remarks             : ${formData.remarks || ''}`
+    ];
+
+    const content = lines.join('\n');
+    const blob = new Blob([content], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `data-entry-${formData.serialNo || 'form'}.txt`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showSuccess('TXT file downloaded! Now upload it to submit your work.');
+  };
+
   if (!isAuthenticated || !user || user.role !== 'candidate') {
     return <Navigate to="/candidate" replace />;
   }
@@ -185,7 +235,7 @@ const CandidateDashboard = () => {
     <div className="candidate-dashboard">
       {/* Header */}
       <header className="dashboard-header">
-        <h1>Candidate Dashboard</h1>
+        <h1>Working Panel</h1>
         <p>Welcome, {user.username}</p>
         <button onClick={logout} className="logout-btn">Logout</button>
       </header>
@@ -346,13 +396,27 @@ const CandidateDashboard = () => {
                 <div className="form-group"><label>Installment</label><input type="text" name="installment" value={formData.installment} onChange={handleFormChange} placeholder="Enter Installment" /></div>
                 <div className="form-group"><label>Amount In Words</label><input type="text" name="amountInWords" value={formData.amountInWords} onChange={handleFormChange} placeholder="Enter Amount In Words" /></div>
                 <div className="form-group full-width"><label>Remarks</label><textarea name="remarks" value={formData.remarks} onChange={handleFormChange} placeholder="Enter Remarks" rows="4"></textarea></div>
-                <button type="submit" className="btn btn-submit">Submit Form</button>
+                <div className="form-actions">
+                  <button type="button" onClick={generateTxtFile} className="btn btn-secondary">📄 Generate TXT File</button>
+                  <button type="submit" className="btn btn-submit">Save Form Data</button>
+                </div>
               </form>
             </div>
           </div>
 
           <div className="file-upload-section">
             <h2>Upload Your Work File</h2>
+            <div className="upload-instructions">
+              <h3>How to Submit Your Work:</h3>
+              <ol>
+                <li>Fill out the form details above with the required information</li>
+                <li>Click "Generate TXT File" to download your completed form as a .txt file</li>
+                <li>Select the assigned task from the dropdown below</li>
+                <li>Choose the generated .txt file to upload</li>
+                <li>Click "Upload File" to submit your work</li>
+              </ol>
+              <p><strong>Note:</strong> Upload your completed data entry form as a .txt file or project files as a .zip file.</p>
+            </div>
             <form onSubmit={handleFileUpload} className="upload-form">
               <div className="form-group">
                 <label htmlFor="task-select">Select Task *</label>

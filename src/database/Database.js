@@ -238,6 +238,22 @@ class Database {
     });
   }
 
+  deleteCandidate(candidateId) {
+    return new Promise((resolve, reject) => {
+      this.db.run(
+        "DELETE FROM users WHERE id = ? AND role = 'candidate'",
+        [candidateId],
+        function(err) {
+          if (err) {
+            reject(err);
+          } else {
+            resolve(this.changes);
+          }
+        }
+      );
+    });
+  }
+
   // Task methods
   createTask(taskData) {
     return new Promise((resolve, reject) => {

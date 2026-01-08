@@ -34,7 +34,7 @@ const DemoSetup = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post('http://localhost:5000/api/auth/create-demo-candidate');
+      const response = await axios.post('http://localhost:5002/api/auth/create-demo-candidate');
       setResult(response.data);
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to create demo candidates');

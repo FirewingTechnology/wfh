@@ -23,10 +23,26 @@ const UploadTaskModal = ({ candidates, onClose, onTaskUploaded }) => {
     }));
   };
 
+  const formatFileSize = (bytes) => {
+    if (bytes === 0) return '0 Bytes';
+    
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+  };
+
   const handleFileSelect = (file) => {
-    if (file && file.type === 'application/zip') {
+    const allowedTypes = ['application/zip', 'application/x-zip-compressed', 'application/x-zip'];
+    const allowedExtensions = ['.zip'];
+    
+    const isValidType = allowedTypes.includes(file.type);
+    const isValidExtension = allowedExtensions.some(ext => file.name.toLowerCase().endsWith(ext));
+    
+    if (file && (isValidType || isValidExtension)) {
       setSelectedFile(file);
-      showInfo(`Selected file: ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`);
+      showInfo(`Selected file: ${file.name} (${formatFileSize(file.size)})`);
     } else {
       showError('Please select a valid ZIP file');
     }

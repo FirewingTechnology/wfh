@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5002/api';
 
 class ApiService {
   constructor() {
@@ -62,6 +62,11 @@ class ApiService {
 
   async createCandidate(candidateData) {
     const response = await this.api.post('/admin/create-candidate', candidateData);
+    return response.data;
+  }
+
+  async deleteCandidate(candidateId) {
+    const response = await this.api.delete(`/admin/candidates/${candidateId}`);
     return response.data;
   }
 

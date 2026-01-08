@@ -8,7 +8,7 @@ Make sure you have Node.js (v16+) installed on your system.
 
 1. Navigate to the project directory:
 ```bash
-cd admin-candidate-desktop
+cd employee-or-candidate-dashboard
 ```
 
 2. Install dependencies:
@@ -23,7 +23,7 @@ npm install
 npm run dev
 ```
 This will start:
-- Express API server on port 5000
+- Express API server on port 5002
 - React development server on port 3000
 - Electron desktop application
 
@@ -88,7 +88,7 @@ npm run pack
 
 ## Troubleshooting
 
-1. **Port conflicts:** Make sure ports 3000 and 5000 are available
+1. **Port conflicts:** Make sure ports 3000 and 5002 are available
 2. **Database issues:** Delete `src/database/app.db` to reset
 3. **Build issues:** Clear node_modules and run `npm install` again
 4. **Electron issues:** Make sure you have the required build tools for your platform

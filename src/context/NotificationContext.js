@@ -33,7 +33,7 @@ const notificationReducer = (state, action) => {
 export const NotificationProvider = ({ children }) => {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
 
-  const addNotification = (message, type = 'info', duration = 5000) => {
+  const addNotification = (message, type = 'info', duration = 5002) => {
     const id = Date.now() + Math.random();
     const notification = {
       id,

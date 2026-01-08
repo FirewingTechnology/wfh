@@ -50,6 +50,19 @@ const AdminDashboard = () => {
     showSuccess('Task uploaded and assigned successfully!');
   };
 
+  const handleDeleteCandidate = async (candidateId, candidateName) => {
+    if (window.confirm(`Are you sure you want to delete candidate "${candidateName}"? This action cannot be undone.`)) {
+      try {
+        await ApiService.deleteCandidate(candidateId);
+        setCandidates(prev => prev.filter(candidate => candidate.id !== candidateId));
+        showSuccess('Candidate deleted successfully!');
+      } catch (error) {
+        showError('Failed to delete candidate');
+        console.error('Delete candidate error:', error);
+      }
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       assigned: { class: 'badge-info', text: 'Assigned' },
@@ -100,7 +113,7 @@ const AdminDashboard = () => {
       <header className="dashboard-header">
         <div className="header-content">
           <div className="header-info">
-            <h1>Admin Dashboard</h1>
+            <h1>Admin Portal</h1>
             <p>Welcome back, {user?.username}</p>
           </div>
           <div className="header-actions">
@@ -230,6 +243,7 @@ const AdminDashboard = () => {
                       <th>Mobile</th>
                       <th>Created Date</th>
                       <th>Status</th>
+                      <th>Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -241,6 +255,15 @@ const AdminDashboard = () => {
                         <td>{formatDate(candidate.created_at)}</td>
                         <td>
                           <span className="badge badge-success">Active</span>
+                        </td>
+                        <td>
+                          <button
+                            className="btn btn-danger btn-sm"
+                            onClick={() => handleDeleteCandidate(candidate.id, candidate.username)}
+                            title="Delete candidate"
+                          >
+                            Delete
+                          </button>
                         </td>
                       </tr>
                     ))}
